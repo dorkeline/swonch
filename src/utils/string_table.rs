@@ -5,30 +5,30 @@ use bstr::{BStr, ByteSlice};
 use core::{fmt, iter::FusedIterator};
 
 /// A string table containing strings that are seperated
-/// by null and can be accessed either by index or iteration. 
-/// 
+/// by null and can be accessed either by index or iteration.
+///
 /// # Note
 /// The string table assumes every string is null terminated **including the last one**.
 /// It won't cause memory safety issues but it will just not give you the last string.
-/// 
+///
 /// This table uses the [`bstr::BStr`] type to more conveniently work with
-/// utf8-ish data and not just ascii. 
+/// utf8-ish data and not just ascii.
 #[derive(Clone)]
 #[binrw::binrw]
 #[br(import(size: usize))]
 pub struct StringTable(#[br(count = size)] Vec<u8>);
 
 impl StringTable {
-    /// Creates a StringTable from a raw bytes backend. If you have a iterator of strings 
-    /// consider using the `FromIterator` implementation instead by `.collect()`'ing. 
-    /// 
+    /// Creates a StringTable from a raw bytes backend. If you have a iterator of strings
+    /// consider using the `FromIterator` implementation instead by `.collect()`'ing.
+    ///
     /// # Example
     /// ```
     /// use swonch::utils::string_table::StringTable;
-    /// 
+    ///
     /// let raw: Vec<u8> = b"foo\0bar\0".into();
     /// let st = StringTable::from_raw(raw);
-    /// 
+    ///
     /// assert!(st.get(0).is_some());
     /// ```
     pub fn from_raw(raw: impl Into<Vec<u8>>) -> Self {
@@ -37,14 +37,14 @@ impl StringTable {
 
     /// Gets a string from the string table by byte index of the first character, **not** the nth' string.
     /// If you want to get the nth string consider using `table.iter().nth(n)` instead.
-    /// 
+    ///
     /// # Example
     /// ```
     /// use swonch::utils::string_table::StringTable;
     /// use bstr::ByteSlice;
-    /// 
+    ///
     /// let st: StringTable = ["foo", "bar"].iter().collect();
-    /// 
+    ///
     /// assert_eq!(st.get(0).unwrap(), b"foo".as_bstr());
     /// assert_eq!(st.get(4).unwrap(), b"bar".as_bstr());
     /// ```
@@ -57,14 +57,14 @@ impl StringTable {
         })
     }
 
-    /// Iterates over all strings in the string table. 
-    /// 
+    /// Iterates over all strings in the string table.
+    ///
     /// # Example
     /// ```
     /// use swonch::utils::string_table::StringTable;
-    /// 
+    ///
     /// let st: StringTable = ["foo", "bar"].iter().collect();
-    /// 
+    ///
     /// for string in st.iter() {
     ///     println!("{string}");
     /// }
@@ -76,7 +76,7 @@ impl StringTable {
         }
     }
 
-    /// Retrieves the underlying byte array. 
+    /// Retrieves the underlying byte array.
     pub fn as_bytes(&self) -> &[u8] {
         &self.0
     }
@@ -91,7 +91,7 @@ impl<S: AsRef<[u8]>> FromIterator<S> for StringTable {
 
             // only slice up to the first 0 byte
             let slice = &s[..s.find([0]).unwrap_or(s.len())];
-            
+
             if let Some(b) = slice.last() {
                 inner.extend_from_slice(slice);
                 if *b != 0 {

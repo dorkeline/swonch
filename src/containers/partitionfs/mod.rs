@@ -2,8 +2,8 @@ pub mod hfs0;
 pub mod pfs0;
 
 use crate::storage::{Storage, StorageMapper, SubStorage};
-use crate::utils::string_table::StringTable;
 use crate::utils::sealed::Sealed;
+use crate::utils::string_table::StringTable;
 use alloc::{sync::Arc, vec::Vec};
 use binrw::meta::ReadEndian;
 use binrw::{BinRead, BinWrite};

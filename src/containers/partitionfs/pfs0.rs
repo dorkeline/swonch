@@ -1,5 +1,5 @@
-use crate::utils::string_table::StringTable;
 use crate::utils::sealed::Sealed;
+use crate::utils::string_table::StringTable;
 use alloc::vec::Vec;
 
 use super::{CommonHeader, EntryLike, HeaderLike};

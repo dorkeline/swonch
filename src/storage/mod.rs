@@ -8,9 +8,10 @@ pub use file::FileStorage;
 use binrw::io::{Read, Seek, SeekFrom};
 
 mod mapper;
+mod memory;
 mod substorage;
 
-pub use self::{mapper::StorageMapper, substorage::SubStorage};
+pub use self::{mapper::StorageMapper, memory::MemoryStorage, substorage::SubStorage};
 
 pub trait Storage {
     fn read_at(self: &Arc<Self>, offset: u64, buf: &mut [u8]) -> Result<usize, ()>;
