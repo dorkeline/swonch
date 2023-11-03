@@ -2,7 +2,7 @@
 
 use alloc::vec::Vec;
 use bstr::{BStr, ByteSlice};
-use core::fmt;
+use core::{fmt, iter::FusedIterator};
 
 /// A string table containing strings that are seperated
 /// by null and can be accessed either by index or iteration. 
@@ -126,6 +126,8 @@ impl<'a> Iterator for StringTableIter<'a> {
     }
 }
 
+impl<'a> FusedIterator for StringTableIter<'a> {}
+
 #[cfg(test)]
 mod tests {
     use super::StringTable;
@@ -140,6 +142,6 @@ mod tests {
             assert_eq!(s, *&b"foo");
         }
 
-        assert_eq!(table.as_bytes().len(), 4 * 0x4)
+        assert_eq!(table.as_bytes().len(), strings.len() * b"foo\0".len())
     }
 }
