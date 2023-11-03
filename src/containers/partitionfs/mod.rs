@@ -97,6 +97,10 @@ impl<H: HeaderLike, S: ?Sized + Storage> PartitionFs<H, S> {
         Self { hdr, data }
     }
 
+    pub fn names(&self) -> impl Iterator<Item = &BStr> {
+        self.hdr.string_table().iter().filter(|n| !n.is_empty())
+    }
+
     pub fn files(&self) -> impl Iterator<Item = Entry<'_, S, H>> {
         self.hdr.entries().iter().map(|e| Entry {
             parent: self,
