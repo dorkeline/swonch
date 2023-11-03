@@ -5,4 +5,3 @@ pub trait FileSystem {
 
     fn root(&self) -> Self::DirEntry;
 }
-

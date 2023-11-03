@@ -1,6 +1,5 @@
 /// Reads a NSP as a PFS0, looks for a .tik file inside
 /// and reads the titlekey from a hardcoded position
-
 use swonch::{prelude::*, storage::FileStorage};
 
 fn hex_str(b: &[u8]) -> String {

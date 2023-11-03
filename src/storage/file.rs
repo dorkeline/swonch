@@ -1,9 +1,9 @@
 use super::Storage;
 
-use std::path::Path;
-use std::sync::{Mutex, Arc};
 use std::fs::File;
-use std::io::{self, SeekFrom, Read, Seek};
+use std::io::{self, Read, Seek, SeekFrom};
+use std::path::Path;
+use std::sync::{Arc, Mutex};
 
 pub struct FileStorage {
     fp: Mutex<File>,
