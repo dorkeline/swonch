@@ -40,7 +40,7 @@ impl Pfs0Header {
     pub fn size(&self) -> usize {
         Self::STATIC_HDR_SIZE
             + self.0.entries.len() * core::mem::size_of::<RawPfs0Entry>()
-            + self.0.string_table.0.len()
+            + self.0.string_table.as_bytes().len()
     }
 }
 

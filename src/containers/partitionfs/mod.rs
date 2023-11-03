@@ -58,7 +58,7 @@ where
     entry_cnt: u32,
 
     #[br(temp)]
-    #[bw(calc = string_table.0.len() as u32)]
+    #[bw(calc = string_table.as_bytes().len() as u32)]
     string_table_size: u32,
 
     reserved: u32,
