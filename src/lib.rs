@@ -12,3 +12,6 @@ pub mod prelude {
         storage::Storage,
     };
 }
+
+// TODO:
+// before adding any new functionality take care of the lack of error handling

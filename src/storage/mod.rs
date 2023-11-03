@@ -27,7 +27,7 @@ pub trait Storage {
         M::map_from_storage(self, opts)
     }
 
-    fn to_file_like(self: &Arc<Self>) -> StorageWrapper<Self> {
+    fn to_file_like(self: &Arc<Self>) -> StorageWrapper<Arc<Self>> {
         StorageWrapper {
             s: Arc::clone(self),
             offset: 0,
@@ -36,6 +36,16 @@ pub trait Storage {
 }
 
 impl<S: ?Sized + Storage> Storage for Arc<S> {
+    fn read_at(&self, offset: u64, buf: &mut [u8]) -> Result<usize, ()> {
+        (**self).read_at(offset, buf)
+    }
+
+    fn length(&self) -> u64 {
+        (**self).length()
+    }
+}
+
+impl<S: ?Sized + Storage> Storage for &S {
     fn read_at(&self, offset: u64, buf: &mut [u8]) -> Result<usize, ()> {
         (**self).read_at(offset, buf)
     }
@@ -61,12 +71,12 @@ pub trait WriteStorage: Storage {
 }
 
 /// wrap a Storage to get a type providing Read/Seek/Write implementations
-pub struct StorageWrapper<S: ?Sized + Storage> {
-    s: Arc<S>,
+pub struct StorageWrapper<S: Storage> {
+    s: S,
     offset: u64,
 }
 
-impl<S: ?Sized + Storage> Read for StorageWrapper<S> {
+impl<S: Storage> Read for StorageWrapper<S> {
     fn read(&mut self, buf: &mut [u8]) -> binrw::io::Result<usize> {
         self.s
             .read_at(self.offset, buf)
@@ -78,7 +88,7 @@ impl<S: ?Sized + Storage> Read for StorageWrapper<S> {
     }
 }
 
-impl<S: ?Sized + Storage> Seek for StorageWrapper<S> {
+impl<S: Storage> Seek for StorageWrapper<S> {
     fn seek(&mut self, pos: SeekFrom) -> binrw::io::Result<u64> {
         match pos {
             SeekFrom::Start(offset) => self.offset = offset,

@@ -33,7 +33,7 @@ impl<B: AsRef<[u8]>> MemoryStorage<B> {
     }
 
     // FIXME: this is only needed because the inner is a Mutex, can we get rid of this (and/or the Mutex)
-    // while still having write support somehow?
+    // while still having write support somehow? maybe bytes::{Bytes, BytesMut} and specialised impl's?
     pub fn map_inner(&self, f: impl FnOnce(&[u8])) {
         let lock = self.0.lock();
         f(lock.as_ref());
