@@ -1,4 +1,4 @@
-use super::Storage;
+use super::{Storage, SwonchResult};
 use alloc::sync::Arc;
 
 pub struct SubStorage<S: ?Sized> {
@@ -18,14 +18,14 @@ impl<S: Storage + ?Sized> SubStorage<S> {
 }
 
 impl<S: ?Sized + Storage> Storage for SubStorage<S> {
-    fn read_at(&self, offset: u64, mut buf: &mut [u8]) -> Result<usize, ()> {
+    fn read_at(&self, offset: u64, mut buf: &mut [u8]) -> SwonchResult<usize> {
         use core::cmp::min;
 
         let buf_len = buf.len();
-        let available_len = self.len.checked_sub(offset).unwrap_or(0);
+        let available_len = self.len.saturating_sub(offset);
         buf = &mut buf[..min(available_len as usize, buf_len)];
 
-        if buf.len() == 0 {
+        if buf.is_empty() {
             return Ok(0);
         }
 

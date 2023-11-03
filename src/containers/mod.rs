@@ -1,3 +1,4 @@
+pub mod nca;
 pub mod partitionfs;
 
 pub trait FileSystem {

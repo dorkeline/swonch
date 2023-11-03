@@ -5,8 +5,8 @@ mod file;
 #[cfg(feature = "std")]
 pub use file::FileStorage;
 
+use crate::{sync_impl::Mutex, SwonchResult};
 use binrw::io::{Read, Seek, SeekFrom};
-use parking_lot::Mutex;
 
 mod mapper;
 mod memory;
@@ -15,7 +15,7 @@ mod substorage;
 pub use self::{mapper::StorageMapper, memory::MemoryStorage, substorage::SubStorage};
 
 pub trait Storage {
-    fn read_at(&self, offset: u64, buf: &mut [u8]) -> Result<usize, ()>;
+    fn read_at(&self, offset: u64, buf: &mut [u8]) -> SwonchResult<usize>;
 
     fn length(&self) -> u64;
 
@@ -36,7 +36,7 @@ pub trait Storage {
 }
 
 impl<S: ?Sized + Storage> Storage for Arc<S> {
-    fn read_at(&self, offset: u64, buf: &mut [u8]) -> Result<usize, ()> {
+    fn read_at(&self, offset: u64, buf: &mut [u8]) -> SwonchResult<usize> {
         (**self).read_at(offset, buf)
     }
 
@@ -46,7 +46,7 @@ impl<S: ?Sized + Storage> Storage for Arc<S> {
 }
 
 impl<S: ?Sized + Storage> Storage for &S {
-    fn read_at(&self, offset: u64, buf: &mut [u8]) -> Result<usize, ()> {
+    fn read_at(&self, offset: u64, buf: &mut [u8]) -> SwonchResult<usize> {
         (**self).read_at(offset, buf)
     }
 
@@ -56,18 +56,17 @@ impl<S: ?Sized + Storage> Storage for &S {
 }
 
 impl<S: ?Sized + Storage> Storage for Mutex<S> {
-    fn read_at(&self, offset: u64, buf: &mut [u8]) -> Result<usize, ()> {
+    fn read_at(&self, offset: u64, buf: &mut [u8]) -> SwonchResult<usize> {
         (*self.lock()).read_at(offset, buf)
     }
 
     fn length(&self) -> u64 {
         (*self.lock()).length()
     }
-    
 }
 
 pub trait WriteStorage: Storage {
-    fn write_at(self: &Arc<Self>, offset: u64, data: &[u8]) -> Result<usize, ()>;
+    fn write_at(self: &Arc<Self>, offset: u64, data: &[u8]) -> SwonchResult<usize>;
 }
 
 /// wrap a Storage to get a type providing Read/Seek/Write implementations
@@ -84,7 +83,7 @@ impl<S: Storage> Read for StorageWrapper<S> {
                 self.offset += size as u64;
                 size
             })
-            .map_err(|_e| todo!())
+            .map_err(|e| binrw::io::Error::new(binrw::io::ErrorKind::Other, e))
     }
 }
 

@@ -1,9 +1,9 @@
 //! A Storage wrapping a byte array in memory.
 
 use super::{Storage, WriteStorage};
-use alloc::sync::Arc;
+use crate::{sync_impl::Mutex, SwonchResult};
+use alloc::{sync::Arc, vec::Vec};
 use core::fmt;
-use parking_lot::Mutex;
 
 /// A Storage wrapping a byte array in memory.
 pub struct MemoryStorage<B>(Mutex<B>);
@@ -42,12 +42,12 @@ impl<B: AsRef<[u8]>> MemoryStorage<B> {
 
 impl MemoryStorage<Vec<u8>> {
     pub fn with_capacity(cap: usize) -> Arc<Self> {
-        Self::new(vec![0; cap])
+        Self::new(alloc::vec![0; cap])
     }
 }
 
 impl<B: AsRef<[u8]>> Storage for MemoryStorage<B> {
-    fn read_at(&self, offset: u64, buf: &mut [u8]) -> Result<usize, ()> {
+    fn read_at(&self, offset: u64, buf: &mut [u8]) -> SwonchResult<usize> {
         let lock = self.0.lock();
         let inner = lock.as_ref();
         if let Some(available_buf) = inner.get(offset as usize..) {
@@ -67,13 +67,13 @@ impl<B: AsRef<[u8]>> Storage for MemoryStorage<B> {
 }
 
 impl<B: AsRef<[u8]> + AsMut<[u8]>> WriteStorage for MemoryStorage<B> {
-    fn write_at(self: &Arc<Self>, offset: u64, data: &[u8]) -> Result<usize, ()> {
+    fn write_at(self: &Arc<Self>, offset: u64, data: &[u8]) -> SwonchResult<usize> {
         let mut lock = self.0.lock();
         let buf = lock.as_mut();
-        let avail_size = buf.len().checked_sub(offset as usize).unwrap_or(0);
+        let avail_size = buf.len().saturating_sub(offset as usize);
         let len_to_copy = core::cmp::min(data.len(), avail_size);
         if avail_size == 0 || len_to_copy == 0 {
-            return Ok(0)
+            return Ok(0);
         }
         buf[offset as usize..][..len_to_copy].copy_from_slice(&data[..len_to_copy]);
         Ok(len_to_copy)
@@ -90,57 +90,61 @@ impl<B: Clone + AsRef<[u8]>> fmt::Debug for MemoryStorage<B> {
 
 #[cfg(test)]
 mod tests {
-    use super::{MemoryStorage, Storage, WriteStorage};
+    use super::{MemoryStorage, Storage, SwonchResult, WriteStorage};
 
     #[test]
-    fn works_as_expected() {
+    fn works_as_expected() -> SwonchResult<()> {
         let v = [1, 2, 3, 4].to_vec();
         let storage = MemoryStorage::new(v);
 
         // partial read from start
         let mut buf = [0; 3];
-        storage.read_at(0, &mut buf).unwrap();
+        storage.read_at(0, &mut buf)?;
         assert_eq!(buf, [1, 2, 3]);
 
         // full read from start
         let mut buf = [0; 4];
-        storage.read_at(0, &mut buf).unwrap();
+        storage.read_at(0, &mut buf)?;
         assert_eq!(buf, [1, 2, 3, 4]);
 
         // full read with larger array
         let mut buf = [0; 5];
-        storage.read_at(0, &mut buf).unwrap();
+        storage.read_at(0, &mut buf)?;
         assert_eq!(buf, [1, 2, 3, 4, 0]);
 
         // full read from middle
         let mut buf = [0; 3];
-        storage.read_at(1, &mut buf).unwrap();
+        storage.read_at(1, &mut buf)?;
         assert_eq!(buf, [2, 3, 4]);
 
         // read at the end
         let mut buf = [0; 3];
-        let ret = storage.read_at(4, &mut buf).unwrap();
+        let ret = storage.read_at(4, &mut buf)?;
         assert_eq!(ret, 0);
         assert_eq!(buf, [0, 0, 0]);
+
+        Ok(())
     }
 
     #[test]
-    fn writing_works() {
+    fn writing_works() -> SwonchResult<()> {
         let storage = MemoryStorage::with_capacity(6);
 
-        assert_eq!(storage.write_at(0, &[1, 2]), Ok(2));
+        assert_eq!(storage.write_at(0, &[1, 2])?, 2);
         storage.map_inner(|buf| assert_eq!(buf, &[1, 2, 0, 0, 0, 0]));
 
-        assert_eq!(storage.write_at(2, &[3, 4, 5]), Ok(3));
+        assert_eq!(storage.write_at(2, &[3, 4, 5])?, 3);
         storage.map_inner(|buf| assert_eq!(buf, &[1, 2, 3, 4, 5, 0]));
 
-        assert_eq!(storage.write_at(5, &[6, 7]), Ok(1));
+        assert_eq!(storage.write_at(5, &[6, 7])?, 1);
         storage.map_inner(|buf| assert_eq!(buf, &[1, 2, 3, 4, 5, 6]));
 
-        assert_eq!(storage.write_at(8, &[0]), Ok(0));
+        assert_eq!(storage.write_at(8, &[0])?, 0);
         storage.map_inner(|buf| assert_eq!(buf, &[1, 2, 3, 4, 5, 6]));
 
-        assert_eq!(storage.write_at(0, &[0, 0, 0, 0, 0, 0, 0]), Ok(6));
+        assert_eq!(storage.write_at(0, &[0, 0, 0, 0, 0, 0, 0])?, 6);
         storage.map_inner(|buf| assert_eq!(buf, &[0, 0, 0, 0, 0, 0]));
+
+        Ok(())
     }
 }

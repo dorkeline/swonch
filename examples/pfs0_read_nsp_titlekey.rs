@@ -12,22 +12,21 @@ fn hex_str(b: &[u8]) -> String {
     s
 }
 
-fn main() {
-    let mut buf = [0; 0x10];
+fn main() -> SwonchResult<()> {
+    let mut tkey = [0; 0x10];
     let fpath = std::env::args()
         .nth(1)
         .expect("needs path to a nsp as first argument");
 
-    FileStorage::open(fpath)
-        .expect("failed to open file")
-        .map::<Pfs0<_>>(())
-        .expect("couldnt parse pfs0")
+    FileStorage::open(fpath)?
+        .map::<Pfs0<_>>(())?
         .files()
         .find(|e| e.name().ends_with(b".tik"))
         .expect("no ticket found")
         .data()
-        .read_at(0x180, &mut buf)
-        .expect("couldnt read from nested file in pfs0");
+        .read_at(0x180, &mut tkey)?;
 
-    println!("tkey: {}", hex_str(&buf));
+    println!("{}", hex_str(&tkey));
+
+    Ok(())
 }

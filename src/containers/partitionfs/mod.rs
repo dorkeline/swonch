@@ -1,9 +1,12 @@
 pub mod hfs0;
 pub mod pfs0;
 
-use crate::storage::{Storage, StorageMapper, SubStorage};
-use crate::utils::sealed::Sealed;
-use crate::utils::string_table::StringTable;
+use crate::{
+    storage::{Storage, StorageMapper, SubStorage},
+    utils::{sealed::Sealed, string_table::StringTable},
+    SwonchResult,
+};
+
 use alloc::{sync::Arc, vec::Vec};
 use binrw::meta::ReadEndian;
 use binrw::{BinRead, BinWrite};
@@ -91,10 +94,10 @@ pub struct PartitionFs<H: BinRead + BinWrite, S: ?Sized + Storage> {
 }
 
 impl<H: HeaderLike, S: ?Sized + Storage> PartitionFs<H, S> {
-    pub fn from_storage(parent: &Arc<S>) -> Self {
-        let hdr = H::read(&mut parent.to_file_like()).unwrap();
+    pub fn from_storage(parent: &Arc<S>) -> SwonchResult<Self> {
+        let hdr = H::read(&mut parent.to_file_like())?;
         let data = parent.split(hdr.size() as u64, parent.length() - hdr.size() as u64);
-        Self { hdr, data }
+        Ok(Self { hdr, data })
     }
 
     pub fn names(&self) -> impl Iterator<Item = &BStr> {
@@ -112,9 +115,9 @@ impl<H: HeaderLike, S: ?Sized + Storage> PartitionFs<H, S> {
 
 impl<H: HeaderLike, S: ?Sized + Storage> StorageMapper<S> for PartitionFs<H, S> {
     type Options = ();
-    type Output = Result<Self, ()>;
+    type Output = SwonchResult<Self>;
 
     fn map_from_storage(s: &Arc<S>, _: Self::Options) -> Self::Output {
-        Ok(Self::from_storage(s))
+        Self::from_storage(s)
     }
 }
