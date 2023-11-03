@@ -1,4 +1,4 @@
-pub mod pfs0;
+pub mod partitionfs;
 
 pub trait FileSystem {
     type DirEntry;

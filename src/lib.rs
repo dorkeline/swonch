@@ -7,6 +7,8 @@ pub mod storage;
 pub mod utils;
 
 pub mod prelude {
-    pub use super::containers::pfs0::{Pfs0, Pfs0Header};
-    pub use super::storage::Storage;
+    pub use super::{
+        containers::partitionfs::{hfs0, pfs0::Pfs0},
+        storage::Storage,
+    };
 }
