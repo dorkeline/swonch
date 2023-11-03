@@ -1,0 +1,21 @@
+[package]
+name = "swonch"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+std = ["binrw/std", "bstr/std"]
+default = []
+
+[dependencies]
+binrw = { version = "0.13.0", default-features = false }
+bstr = { version = "1.7.0", default-features = false, features = ["alloc", "unicode"] }
+parking_lot = "0.12.1"
+ringbuffer = "0.15.0"
+
+[dev-dependencies]
+# for examples so they can work with FileStorage
+swonch = { path = "./", features = ["std"] }
