@@ -6,6 +6,7 @@ mod file;
 pub use file::FileStorage;
 
 use binrw::io::{Read, Seek, SeekFrom};
+use parking_lot::Mutex;
 
 mod mapper;
 mod memory;
@@ -14,7 +15,7 @@ mod substorage;
 pub use self::{mapper::StorageMapper, memory::MemoryStorage, substorage::SubStorage};
 
 pub trait Storage {
-    fn read_at(self: &Arc<Self>, offset: u64, buf: &mut [u8]) -> Result<usize, ()>;
+    fn read_at(&self, offset: u64, buf: &mut [u8]) -> Result<usize, ()>;
 
     fn length(&self) -> u64;
 
@@ -35,13 +36,24 @@ pub trait Storage {
 }
 
 impl<S: ?Sized + Storage> Storage for Arc<S> {
-    fn read_at(self: &Arc<Self>, offset: u64, buf: &mut [u8]) -> Result<usize, ()> {
+    fn read_at(&self, offset: u64, buf: &mut [u8]) -> Result<usize, ()> {
         (**self).read_at(offset, buf)
     }
 
     fn length(&self) -> u64 {
         (**self).length()
     }
+}
+
+impl<S: ?Sized + Storage> Storage for Mutex<S> {
+    fn read_at(&self, offset: u64, buf: &mut [u8]) -> Result<usize, ()> {
+        (*self.lock()).read_at(offset, buf)
+    }
+
+    fn length(&self) -> u64 {
+        (*self.lock()).length()
+    }
+    
 }
 
 pub trait WriteStorage: Storage {

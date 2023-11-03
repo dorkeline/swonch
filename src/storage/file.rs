@@ -20,7 +20,7 @@ impl FileStorage {
 }
 
 impl Storage for FileStorage {
-    fn read_at(self: &Arc<Self>, offset: u64, buf: &mut [u8]) -> Result<usize, ()> {
+    fn read_at(&self, offset: u64, buf: &mut [u8]) -> Result<usize, ()> {
         let mut fp = self.fp.lock().unwrap();
 
         fp.seek(SeekFrom::Start(offset)).unwrap();

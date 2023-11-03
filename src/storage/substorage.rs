@@ -18,7 +18,7 @@ impl<S: Storage + ?Sized> SubStorage<S> {
 }
 
 impl<S: ?Sized + Storage> Storage for SubStorage<S> {
-    fn read_at(self: &Arc<Self>, offset: u64, mut buf: &mut [u8]) -> Result<usize, ()> {
+    fn read_at(&self, offset: u64, mut buf: &mut [u8]) -> Result<usize, ()> {
         use core::cmp::min;
 
         let buf_len = buf.len();
