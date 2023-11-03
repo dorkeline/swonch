@@ -1,0 +1,1 @@
+experimenting with making a switch file formats driver in rust that easily supports nested containers transparently
