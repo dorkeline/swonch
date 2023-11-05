@@ -32,6 +32,10 @@ pub trait IStorage: Any + core::fmt::Debug + 'static {
 
     fn is_readonly(&self) -> bool;
 
+    fn flush(&self) -> SwonchResult<()> {
+        Ok(())
+    }
+
     fn split(self, offset: u64, len: u64) -> SwonchResult<Storage>
     where
         Self: Sized,

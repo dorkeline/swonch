@@ -1,5 +1,5 @@
 use super::{IStorage, Storage};
-use binrw::io::{Read, Seek, SeekFrom};
+use binrw::io::{Read, Seek, SeekFrom, Write};
 
 /// wrap a Storage to get a type providing Read/Seek/Write implementations
 pub struct StorageStdioWrapper {
@@ -38,5 +38,21 @@ impl Seek for StorageStdioWrapper {
         };
 
         Ok(self.offset)
+    }
+}
+
+impl Write for StorageStdioWrapper {
+    fn write(&mut self, data: &[u8]) -> binrw::io::Result<usize> {
+        self.s
+            .write_at(self.offset, data)
+            .map(|size| {
+                self.offset += size as u64;
+                size as _
+            })
+            .map_err(crate::utils::other_io_error)
+    }
+
+    fn flush(&mut self) -> binrw::io::Result<()> {
+        self.s.flush().map_err(crate::utils::other_io_error)
     }
 }
