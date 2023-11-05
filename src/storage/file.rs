@@ -30,6 +30,14 @@ impl IStorage for FileStorage {
         Ok(cnt as _)
     }
 
+    fn is_readonly(&self) -> bool {
+        self.fp
+            .lock()
+            .metadata()
+            .map(|m| m.permissions().readonly())
+            .unwrap_or(true)
+    }
+
     fn length(&self) -> SwonchResult<u64> {
         Ok(self.fp.lock().metadata()?.len())
     }

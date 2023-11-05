@@ -23,9 +23,14 @@ pub trait IStorage: Any + core::fmt::Debug + 'static {
     fn read_at(&self, offset: u64, buf: &mut [u8]) -> SwonchResult<u64>;
 
     fn write_at(&self, _offset: u64, _data: &[u8]) -> SwonchResult<u64> {
-        // by default we are not writeable
-        Err(crate::SwonchError::StorageIsReadOnly)
+        if self.is_readonly() {
+            Err(crate::SwonchError::StorageIsReadOnly)
+        } else {
+            todo!("BUG: storage wasnt marked readonly() but hasnt implemented a write_at implementation yet")
+        }
     }
+
+    fn is_readonly(&self) -> bool;
 
     fn split(self, offset: u64, len: u64) -> SwonchResult<Storage>
     where
@@ -107,6 +112,10 @@ impl IStorage for Storage {
 
     fn split(self, offset: u64, len: u64) -> SwonchResult<Storage> {
         Self::split(self, offset, len)
+    }
+
+    fn is_readonly(&self) -> bool {
+        self.inner.is_readonly()
     }
 
     fn into_stdio(self) -> StorageStdioWrapper

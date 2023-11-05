@@ -52,6 +52,13 @@ impl IStorage for VecStorage {
         })
     }
 
+    fn is_readonly(&self) -> bool {
+        match self {
+            ReadOnly(_) => true,
+            Mutable(_) => false,
+        }
+    }
+
     fn write_at(&self, offset: u64, data: &[u8]) -> SwonchResult<u64> {
         let ret = self.map_inner_mut(|buf| {
             let avail_size = buf.len().saturating_sub(offset as usize);

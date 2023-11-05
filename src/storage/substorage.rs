@@ -11,6 +11,9 @@ pub enum SubStorageError {
 
     #[error("parent storage needs to declare a length")]
     FailedToGetParentStorageLength,
+
+    #[error("offset overflowed during calculation")]
+    OffsetOverflow,
 }
 
 pub type SubStorageResult<T> = core::result::Result<T, SubStorageError>;
@@ -73,17 +76,40 @@ impl SubStorage {
 
 impl IStorage for SubStorage {
     fn read_at(&self, offset: u64, mut buf: &mut [u8]) -> SwonchResult<u64> {
-        use core::cmp::min;
-
         let buf_len = buf.len();
         let available_len = self.len.saturating_sub(offset);
-        buf = &mut buf[..min(available_len as usize, buf_len)];
+        buf = &mut buf[..core::cmp::min(available_len as usize, buf_len)];
 
         if buf.is_empty() {
             return Ok(0);
         }
 
-        self.parent.read_at(self.offset + offset, buf)
+        self.parent.read_at(
+            self.offset
+                .checked_add(offset)
+                .ok_or(SubStorageError::OffsetOverflow)?,
+            buf,
+        )
+    }
+
+    fn write_at(&self, offset: u64, mut data: &[u8]) -> SwonchResult<u64> {
+        let avail_len = self.len.saturating_sub(offset);
+        data = &data[..core::cmp::min(avail_len as usize, data.len())];
+
+        if data.is_empty() {
+            return Ok(0);
+        }
+
+        self.parent.write_at(
+            self.offset
+                .checked_add(offset)
+                .ok_or(SubStorageError::OffsetOverflow)?,
+            data,
+        )
+    }
+
+    fn is_readonly(&self) -> bool {
+        self.parent.is_readonly()
     }
 
     fn length(&self) -> SwonchResult<u64> {
