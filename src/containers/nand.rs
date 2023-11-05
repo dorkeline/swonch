@@ -1,5 +1,3 @@
-
-
 pub struct Nand {
     boot0: (),
     boot1: (),

@@ -1,23 +1,25 @@
-
-
 #[cfg(feature = "std")]
 mod file;
+use core::any::Any;
+
 #[cfg(feature = "std")]
 pub use file::FileStorage;
 
 use crate::SwonchResult;
-use binrw::io::{Read, Seek, SeekFrom};
 
 #[cfg(not(feature = "arc_storage"))]
 use alloc::rc::Rc;
 
 pub mod mapper;
 mod memory;
+pub mod stdio;
 pub mod substorage;
 
-pub use self::{mapper::FromStorage, memory::VecStorage, substorage::SubStorage};
+pub use self::{
+    mapper::FromStorage, memory::VecStorage, stdio::StorageStdioWrapper, substorage::SubStorage,
+};
 
-pub trait IStorage: core::fmt::Debug + 'static {
+pub trait IStorage: Any + core::fmt::Debug + 'static {
     fn read_at(&self, offset: u64, buf: &mut [u8]) -> SwonchResult<u64>;
 
     fn write_at(&self, _offset: u64, _data: &[u8]) -> SwonchResult<u64> {
@@ -94,7 +96,7 @@ impl Storage {
     }
 
     pub fn into_stdio(self) -> StorageStdioWrapper {
-        StorageStdioWrapper { s: self, offset: 0 }
+        StorageStdioWrapper::new(self)
     }
 }
 
@@ -124,39 +126,5 @@ impl Clone for Storage {
         Self {
             inner: self.inner.clone(),
         }
-    }
-}
-
-/// wrap a Storage to get a type providing Read/Seek/Write implementations
-pub struct StorageStdioWrapper {
-    s: Storage,
-    offset: u64,
-}
-
-impl Read for StorageStdioWrapper {
-    fn read(&mut self, buf: &mut [u8]) -> binrw::io::Result<usize> {
-        self.s
-            .read_at(self.offset, buf)
-            .map(|size| {
-                self.offset += size as u64;
-                size as _
-            })
-            .map_err(crate::utils::other_io_error)
-    }
-}
-
-impl Seek for StorageStdioWrapper {
-    fn seek(&mut self, pos: SeekFrom) -> binrw::io::Result<u64> {
-        match pos {
-            SeekFrom::Start(offset) => self.offset = offset,
-            SeekFrom::Current(off) => {
-                self.offset = (self.offset as i64 + off) as u64;
-            }
-            SeekFrom::End(off) => {
-                self.offset = (self.s.length()? as i64 - off) as u64;
-            }
-        };
-
-        Ok(self.offset)
     }
 }

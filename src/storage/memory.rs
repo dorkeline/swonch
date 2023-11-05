@@ -4,7 +4,6 @@ use super::{IStorage, Storage};
 use crate::{sync_impl::RwLock, SwonchResult};
 use alloc::vec::Vec;
 
-
 /// A Storage wrapping a byte array in memory.
 #[derive(Debug)]
 pub enum VecStorage {

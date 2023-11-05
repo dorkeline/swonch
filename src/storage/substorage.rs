@@ -1,6 +1,5 @@
 use super::{IStorage, Storage, SwonchResult};
 
-
 #[derive(Debug, PartialEq, thiserror_no_std::Error)]
 pub enum SubStorageError {
     #[error("attempted to create a too large substorage. parent is {parent_len} large, substorage is {len} bytes at offset {offset} exceeding the parent by {}", parent_len - (offset + len))]
@@ -33,7 +32,7 @@ pub type SubStorageResult<T> = core::result::Result<T, SubStorageError>;
 ///
 ///     second_half.read_at(0, &mut buf)?;
 ///     assert_eq!(buf, [4, 5, 6, 7]);
-/// 
+///
 ///     Ok(())
 /// }
 /// ```
