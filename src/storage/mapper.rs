@@ -1,10 +1,7 @@
-use alloc::sync::Arc;
+use super::{Storage, SwonchResult};
 
-use super::Storage;
+pub trait FromStorage: Sized {
+    type Args;
 
-pub trait StorageMapper<S: Storage + ?Sized> {
-    type Options;
-    type Output;
-
-    fn map_from_storage(s: &Arc<S>, opts: Self::Options) -> Self::Output;
+    fn from_storage(parent: Storage, args: Self::Args) -> SwonchResult<Self>;
 }

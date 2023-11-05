@@ -1,93 +1,151 @@
-use alloc::sync::Arc;
+
 
 #[cfg(feature = "std")]
 mod file;
 #[cfg(feature = "std")]
 pub use file::FileStorage;
 
-use crate::{sync_impl::Mutex, SwonchResult};
+use crate::SwonchResult;
 use binrw::io::{Read, Seek, SeekFrom};
 
-mod mapper;
+#[cfg(not(feature = "arc_storage"))]
+use alloc::rc::Rc;
+
+pub mod mapper;
 mod memory;
-mod substorage;
+pub mod substorage;
 
-pub use self::{mapper::StorageMapper, memory::MemoryStorage, substorage::SubStorage};
+pub use self::{mapper::FromStorage, memory::VecStorage, substorage::SubStorage};
 
-pub trait Storage {
-    fn read_at(&self, offset: u64, buf: &mut [u8]) -> SwonchResult<usize>;
+pub trait IStorage: core::fmt::Debug + 'static {
+    fn read_at(&self, offset: u64, buf: &mut [u8]) -> SwonchResult<u64>;
 
-    fn length(&self) -> u64;
-
-    fn split(self: &Arc<Self>, offset: u64, len: u64) -> Arc<SubStorage<Self>> {
-        SubStorage::split_from(Arc::clone(self), offset, len)
+    fn write_at(&self, _offset: u64, _data: &[u8]) -> SwonchResult<u64> {
+        // by default we are not writeable
+        Err(crate::SwonchError::StorageIsReadOnly)
     }
 
-    fn map<M: StorageMapper<Self>>(self: &Arc<Self>, opts: M::Options) -> M::Output {
-        M::map_from_storage(self, opts)
+    fn split(self, offset: u64, len: u64) -> SwonchResult<Storage>
+    where
+        Self: Sized,
+    {
+        Ok(SubStorage::split_from(Storage::new(self), offset, len)?)
     }
 
-    fn to_file_like(self: &Arc<Self>) -> StorageWrapper<Arc<Self>> {
-        StorageWrapper {
-            s: Arc::clone(self),
-            offset: 0,
+    fn into_stdio(self) -> StorageStdioWrapper
+    where
+        Self: Sized,
+    {
+        Storage::new(self).into_stdio()
+    }
+
+    fn length(&self) -> SwonchResult<u64>;
+
+    fn into_storage(self) -> Storage
+    where
+        Self: Sized,
+    {
+        Storage::new(self)
+    }
+}
+
+#[derive(Debug)]
+pub struct Storage {
+    #[cfg(not(feature = "arc_storage"))]
+    inner: alloc::rc::Rc<dyn IStorage>,
+
+    #[cfg(feature = "arc_storage")]
+    inner: alloc::sync::Arc<dyn IStorage>,
+}
+
+pub trait IntoRcStorage {
+    fn into_rc_storage(self) -> Rc<dyn IStorage>;
+}
+
+impl IntoRcStorage for Rc<Storage> {
+    fn into_rc_storage(self) -> Rc<dyn IStorage> {
+        self
+    }
+}
+
+impl<T: IStorage + 'static> IntoRcStorage for T {
+    fn into_rc_storage(self) -> Rc<dyn IStorage> {
+        Rc::new(self)
+    }
+}
+
+impl Storage {
+    pub fn new(storage: impl IntoRcStorage) -> Self {
+        Self {
+            #[cfg(not(feature = "arc_storage"))]
+            inner: storage.into_rc_storage(),
+
+            #[cfg(feature = "arc_storage")]
+            inner: alloc::sync::Arc::new(storage),
+        }
+    }
+
+    pub fn map_to_storage<M: FromStorage>(self, args: M::Args) -> SwonchResult<M> {
+        M::from_storage(self, args)
+    }
+
+    pub fn split(self, offset: u64, len: u64) -> SwonchResult<Storage> {
+        Ok(SubStorage::split_from(self, offset, len)?)
+    }
+
+    pub fn into_stdio(self) -> StorageStdioWrapper {
+        StorageStdioWrapper { s: self, offset: 0 }
+    }
+}
+
+impl IStorage for Storage {
+    fn read_at(&self, offset: u64, buf: &mut [u8]) -> SwonchResult<u64> {
+        self.inner.read_at(offset, buf)
+    }
+
+    fn split(self, offset: u64, len: u64) -> SwonchResult<Storage> {
+        Self::split(self, offset, len)
+    }
+
+    fn into_stdio(self) -> StorageStdioWrapper
+    where
+        Self: Sized,
+    {
+        Self::into_stdio(self)
+    }
+
+    fn length(&self) -> SwonchResult<u64> {
+        self.inner.length()
+    }
+}
+
+impl Clone for Storage {
+    fn clone(&self) -> Self {
+        Self {
+            inner: self.inner.clone(),
         }
     }
 }
 
-impl<S: ?Sized + Storage> Storage for Arc<S> {
-    fn read_at(&self, offset: u64, buf: &mut [u8]) -> SwonchResult<usize> {
-        (**self).read_at(offset, buf)
-    }
-
-    fn length(&self) -> u64 {
-        (**self).length()
-    }
-}
-
-impl<S: ?Sized + Storage> Storage for &S {
-    fn read_at(&self, offset: u64, buf: &mut [u8]) -> SwonchResult<usize> {
-        (**self).read_at(offset, buf)
-    }
-
-    fn length(&self) -> u64 {
-        (**self).length()
-    }
-}
-
-impl<S: ?Sized + Storage> Storage for Mutex<S> {
-    fn read_at(&self, offset: u64, buf: &mut [u8]) -> SwonchResult<usize> {
-        (*self.lock()).read_at(offset, buf)
-    }
-
-    fn length(&self) -> u64 {
-        (*self.lock()).length()
-    }
-}
-
-pub trait WriteStorage: Storage {
-    fn write_at(self: &Arc<Self>, offset: u64, data: &[u8]) -> SwonchResult<usize>;
-}
-
 /// wrap a Storage to get a type providing Read/Seek/Write implementations
-pub struct StorageWrapper<S: Storage> {
-    s: S,
+pub struct StorageStdioWrapper {
+    s: Storage,
     offset: u64,
 }
 
-impl<S: Storage> Read for StorageWrapper<S> {
+impl Read for StorageStdioWrapper {
     fn read(&mut self, buf: &mut [u8]) -> binrw::io::Result<usize> {
         self.s
             .read_at(self.offset, buf)
             .map(|size| {
                 self.offset += size as u64;
-                size
+                size as _
             })
-            .map_err(|e| binrw::io::Error::new(binrw::io::ErrorKind::Other, e))
+            .map_err(crate::utils::other_io_error)
     }
 }
 
-impl<S: Storage> Seek for StorageWrapper<S> {
+impl Seek for StorageStdioWrapper {
     fn seek(&mut self, pos: SeekFrom) -> binrw::io::Result<u64> {
         match pos {
             SeekFrom::Start(offset) => self.offset = offset,
@@ -95,7 +153,7 @@ impl<S: Storage> Seek for StorageWrapper<S> {
                 self.offset = (self.offset as i64 + off) as u64;
             }
             SeekFrom::End(off) => {
-                self.offset = (self.s.length() as i64 - off) as u64;
+                self.offset = (self.s.length()? as i64 - off) as u64;
             }
         };
 

@@ -1,3 +1,4 @@
+pub mod nand;
 pub mod nca;
 pub mod partitionfs;
 

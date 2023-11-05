@@ -2,20 +2,19 @@ pub mod hfs0;
 pub mod pfs0;
 
 use crate::{
-    storage::{Storage, StorageMapper, SubStorage},
+    storage::{mapper::FromStorage, IStorage, Storage},
     utils::{sealed::Sealed, string_table::StringTable},
     SwonchResult,
 };
 
-use alloc::{sync::Arc, vec::Vec};
+use alloc::vec::Vec;
 use binrw::meta::ReadEndian;
 use binrw::{BinRead, BinWrite};
 use bstr::BStr;
 use core::fmt;
 
-pub struct Entry<'a, S: ?Sized + Storage, H: HeaderLike> {
-    parent: &'a PartitionFs<H, S>,
-    data: Arc<SubStorage<SubStorage<S>>>,
+pub struct Entry<'a, H: HeaderLike> {
+    parent: &'a PartitionFs<H>,
     raw: H::RawEntry,
 }
 
@@ -25,7 +24,7 @@ pub trait EntryLike: Sealed + fmt::Debug + Clone {
     fn offset(&self) -> u64;
 }
 
-impl<'a, S: ?Sized + Storage, H: HeaderLike> Entry<'a, S, H> {
+impl<'a, H: HeaderLike> Entry<'a, H> {
     pub fn name(&self) -> &BStr {
         self.parent
             .hdr
@@ -34,12 +33,18 @@ impl<'a, S: ?Sized + Storage, H: HeaderLike> Entry<'a, S, H> {
             .unwrap_or_default()
     }
 
-    pub fn data(&self) -> Arc<impl Storage> {
-        Arc::clone(&self.data)
+    pub fn data(&self) -> SwonchResult<Storage> {
+        // if this fails either the storage changed its mind about having a length (BUG)
+        // or the offset/size reported is incorrect which is a corrupt/malicious PFS0.
+        Ok(self
+            .parent
+            .data
+            .clone()
+            .split(self.raw.offset(), self.raw.size())?)
     }
 }
 
-impl<'a, S: ?Sized + Storage, H: HeaderLike> fmt::Debug for Entry<'a, S, H> {
+impl<'a, H: HeaderLike> fmt::Debug for Entry<'a, H> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Entry")
             .field("name", &self.name())
@@ -88,15 +93,17 @@ where
     fn string_table(&self) -> &StringTable;
 }
 
-pub struct PartitionFs<H: BinRead + BinWrite, S: ?Sized + Storage> {
+pub struct PartitionFs<H: BinRead + BinWrite> {
     hdr: H,
-    data: Arc<SubStorage<S>>,
+    data: Storage,
 }
 
-impl<H: HeaderLike, S: ?Sized + Storage> PartitionFs<H, S> {
-    pub fn from_storage(parent: &Arc<S>) -> SwonchResult<Self> {
-        let hdr = H::read(&mut parent.to_file_like())?;
-        let data = parent.split(hdr.size() as u64, parent.length() - hdr.size() as u64);
+impl<H: HeaderLike> PartitionFs<H> {
+    pub fn from_storage(parent: Storage) -> SwonchResult<Self> {
+        let hdr = H::read(&mut parent.clone().into_stdio())?;
+        let data = parent
+            .clone()
+            .split(hdr.size() as u64, parent.length()? - hdr.size() as u64)?;
         Ok(Self { hdr, data })
     }
 
@@ -104,20 +111,20 @@ impl<H: HeaderLike, S: ?Sized + Storage> PartitionFs<H, S> {
         self.hdr.string_table().iter().filter(|n| !n.is_empty())
     }
 
-    pub fn files(&self) -> impl Iterator<Item = Entry<'_, S, H>> {
-        self.hdr.entries().iter().map(|e| Entry {
-            parent: self,
-            raw: e.clone(),
-            data: self.data.split(e.offset(), e.size()),
+    pub fn files(&self) -> impl Iterator<Item = Entry<'_, H>> {
+        self.hdr.entries().iter().map(|e| {
+            dbg!(Entry {
+                parent: self,
+                raw: e.clone(),
+            })
         })
     }
 }
 
-impl<H: HeaderLike, S: ?Sized + Storage> StorageMapper<S> for PartitionFs<H, S> {
-    type Options = ();
-    type Output = SwonchResult<Self>;
+impl<H: HeaderLike> FromStorage for PartitionFs<H> {
+    type Args = ();
 
-    fn map_from_storage(s: &Arc<S>, _: Self::Options) -> Self::Output {
-        Self::from_storage(s)
+    fn from_storage(parent: Storage, _: Self::Args) -> SwonchResult<Self> {
+        Ok(PartitionFs::from_storage(parent)?)
     }
 }

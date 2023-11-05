@@ -61,4 +61,4 @@ impl HeaderLike for Pfs0Header {
     }
 }
 
-pub type Pfs0<S> = super::PartitionFs<Pfs0Header, S>;
+pub type Pfs0 = super::PartitionFs<Pfs0Header>;
