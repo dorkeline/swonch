@@ -125,8 +125,6 @@ impl NcaHeader {
             let xts = Xts128::new(crypt, tweak);
 
             xts.decrypt_area(&mut buf, 0x200, 0, utils::aes_xtsn_tweak);
-
-            utils::dbg_hexdump(std::io::stdout(), &buf[..0xc00]);
         }
 
         if NcaHeader::is_encrypted(&buf) {

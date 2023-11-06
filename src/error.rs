@@ -19,6 +19,10 @@ pub enum SwonchError {
     Other(#[from] anyhow::Error),
 }
 
+// thiserror_no_std does not impl core::error::Error which is behind an nightly feature flag
+#[cfg(not(feature = "std"))]
+impl core::error::Error for SwonchError {}
+
 impl From<SwonchError> for binrw::io::Error {
     fn from(value: SwonchError) -> Self {
         crate::utils::other_io_error(value)
