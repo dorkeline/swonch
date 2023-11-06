@@ -57,6 +57,28 @@ impl StringTable {
         })
     }
 
+    /// Gets a string from the string table by byte index, with trailing NULL for easier C interop.
+    /// This still returns a [`BStr`] which is just a `[u8]` and can cheaply be cast with `.as_bytes()`
+    ///
+    /// # Example
+    /// ```
+    /// use swonch::utils::string_table::StringTable;
+    /// use bstr::ByteSlice;
+    ///
+    /// let st: StringTable = ["foo", "bar"].iter().collect();
+    ///
+    /// assert_eq!(st.get_with_nul(0).unwrap(), b"foo\0".as_bstr());
+    /// assert_eq!(st.get_with_nul(4).unwrap().as_bytes(), b"bar\0");
+    /// ```
+    pub fn get_with_nul(&self, index: usize) -> Option<&BStr> {
+        self.0.get(index..).and_then(|start| {
+            start
+                .iter()
+                .position(|c| *c == 0)
+                .map(|end| start[..=end].as_bstr())
+        })
+    }
+
     /// Iterates over all strings in the string table.
     ///
     /// # Example
