@@ -8,6 +8,7 @@ license = "Apache-2.0"
 
 [features]
 std = ["binrw/std", "bstr/std", "thiserror-no-std/std", "anyhow/std", "parking_lot"]
+arc_storage = []
 default = []
 
 [dependencies]
@@ -16,6 +17,7 @@ binrw = { version = "0.13.0", default-features = false }
 bstr = { version = "1.7.0", default-features = false, features = ["alloc", "unicode"] }
 false = "0.0.0"
 lazy_static = "1.4.0"
+log = "0.4.20"
 parking_lot = { version = "0.12.1", optional = true }
 ringbuffer = "0.15.0"
 spin = { version = "0.9.8" }

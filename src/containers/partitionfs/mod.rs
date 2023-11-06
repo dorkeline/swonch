@@ -113,10 +113,10 @@ impl<H: HeaderLike> PartitionFs<H> {
 
     pub fn files(&self) -> impl Iterator<Item = Entry<'_, H>> {
         self.hdr.entries().iter().map(|e| {
-            dbg!(Entry {
+            Entry {
                 parent: self,
                 raw: e.clone(),
-            })
+            }
         })
     }
 }

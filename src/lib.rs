@@ -5,6 +5,9 @@
 
 extern crate alloc;
 
+#[macro_use]
+extern crate log;
+
 pub mod containers;
 //pub mod keyset;
 pub mod error;
