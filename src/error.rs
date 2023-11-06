@@ -9,6 +9,9 @@ pub enum SwonchError {
     #[error("tried to write to a readonly storage")]
     StorageIsReadOnly,
 
+    #[error("error with an nca")]
+    Nca(#[from] crate::containers::nca::NcaError),
+
     #[error("substorage error")]
     SubStorage(#[from] crate::storage::substorage::SubStorageError),
 

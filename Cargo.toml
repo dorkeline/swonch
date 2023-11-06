@@ -12,16 +12,19 @@ arc_storage = []
 default = []
 
 [dependencies]
+aes = "0.8.3"
 anyhow = { version = "1.0.75", default-features = false }
 binrw = { version = "0.13.0", default-features = false }
 bstr = { version = "1.7.0", default-features = false, features = ["alloc", "unicode"] }
-false = "0.0.0"
+# fork that exposes the [u8] api and works with no_std
+glob-match = { git = "https://github.com/dorkeline/glob-match", version = "0.2.1" }
 lazy_static = "1.4.0"
 log = "0.4.20"
 parking_lot = { version = "0.12.1", optional = true }
 ringbuffer = "0.15.0"
 spin = { version = "0.9.8" }
 thiserror-no-std = "2.0.2"
+xts-mode = { version = "0.5.1", default-features = false }
 
 [dev-dependencies]
 # for examples so they can work with FileStorage

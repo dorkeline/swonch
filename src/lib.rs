@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(feature = "std", feature(seek_stream_len))]
 #![deny(clippy::unwrap_used)]
-#![feature(error_in_core)]
+#![feature(error_in_core, iter_array_chunks)]
 
 extern crate alloc;
 
@@ -12,13 +12,17 @@ pub mod containers;
 //pub mod keyset;
 pub mod error;
 pub mod storage;
+pub mod common;
 pub mod utils;
 
 pub use error::{SwonchError, SwonchResult};
 
 pub mod prelude {
     pub use super::{
-        containers::partitionfs::{hfs0, pfs0::Pfs0},
+        containers::{
+            nca::Nca,
+            partitionfs::{hfs0, pfs0::Pfs0},
+        },
         storage::{IStorage, Storage, VecStorage},
         SwonchError, SwonchResult,
     };
