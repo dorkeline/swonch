@@ -1,5 +1,5 @@
-use core::num::ParseIntError;
 use core::fmt;
+use core::num::ParseIntError;
 pub mod string_table;
 
 pub(crate) mod sealed {
@@ -43,6 +43,14 @@ pub fn hex_str_to_array<const N: usize>(s: &str) -> Result<[u8; N], ParseKeyErro
     Ok(buf)
 }
 
+pub fn hex_str_to_vec(s: &str) -> Result<Vec<u8>, ParseIntError> {
+    (0..s.len())
+        .step_by(2)
+        .map(|idx| Ok(u8::from_str_radix(&s[idx..][..2], 16)?))
+        .collect()
+}
+
+#[allow(unused)]
 pub(crate) fn dbg_hexdump(mut writer: impl binrw::io::Write, buf: &[u8]) {
     let row_size = 0x20;
     for (idx, row) in buf.chunks(row_size).enumerate() {

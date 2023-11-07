@@ -83,8 +83,33 @@ impl Keyset {
         todo!()
     }
 
-    pub fn insert_key(&self, key_name: impl AsRef<str>, key: &[u8], index: Option<u8>) {
+    pub fn insert_key(
+        &self,
+        key_name: impl AsRef<str>,
+        key: impl Into<Vec<u8>>,
+        index: Option<u8>,
+    ) {
         todo!()
+    }
+
+    pub fn insert_titlekeys_from_ini(&self, reader: impl crate::io::Read) {
+        let mut titles = self.titles.write();
+        parse_from_ini(reader, |name, key, idx| {
+            if let Some(_) = idx {
+                return log::error!("titlekey had index in name?? {name} {idx:?}");
+            }
+
+            let Ok(rights_id) = name.try_into() else {
+                return log::error!("couldnt parse rights id from {name:?}");
+            };
+
+            let key_len = key.len();
+            let Ok(title_key) = key.try_into() else {
+                return log::error!("title key has the wrong size {key_len}, has to be 16");
+            };
+
+            titles.insert(rights_id, title_key);
+        })
     }
 
     pub fn insert_titlekey(
@@ -104,5 +129,49 @@ impl Keyset {
             .get(&rights_id)
             .copied()
             .ok_or(KeyError::NoTitlekeyForRightsId { rights_id })
+    }
+}
+
+fn parse_from_ini(
+    mut reader: impl crate::io::Read,
+    mut insert_fn: impl FnMut(&str, Vec<u8>, Option<u8>),
+) {
+    let mut s = String::new();
+    reader.read_to_string(&mut s).unwrap();
+
+    for line in s.lines() {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with(';') {
+            continue;
+        }
+
+        let mut split_line = line.split('=');
+
+        let (Some(name), Some(key)) = (
+            split_line.next().map(str::trim),
+            split_line.next().map(str::trim),
+        ) else {
+            log::warn!("malformed line in keys ini: {line}");
+            continue;
+        };
+
+        let Ok(key) = crate::utils::hex_str_to_vec(key) else {
+            log::warn!("malformed key {key}");
+            continue;
+        };
+        let (name, idx) = split_name_into_name_and_index(name);
+
+        insert_fn(name, key, idx);
+    }
+}
+
+fn split_name_into_name_and_index(name: &str) -> (&str, Option<u8>) {
+    match name
+        .split('_')
+        .last()
+        .and_then(|s| Some((s, u8::from_str_radix(s, 16).ok()?)))
+    {
+        Some((suf, idx)) => (&name[..name.len() - (suf.len() + 1)], Some(idx)),
+        None => (name, None),
     }
 }
