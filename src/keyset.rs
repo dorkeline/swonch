@@ -8,7 +8,7 @@ lazy_static::lazy_static! {
 }
 
 pub struct Keyset {
-    console: (),
+    prod: RwLock<BTreeMap<String, Key>>,
     titles: RwLock<BTreeMap<RightsId, TitleKey>>,
 }
 
@@ -32,6 +32,7 @@ pub enum KeyError {
     RequestedStandaloneForVersionedKey { key_name: String },
 }
 
+#[derive(Clone)]
 enum Key {
     Single(Vec<u8>),
     Versioned(BTreeMap<u8, Vec<u8>>),
@@ -44,7 +45,7 @@ pub trait FromRawKey: Sized {
 impl Keyset {
     pub fn empty() -> Self {
         Self {
-            console: (),
+            prod: RwLock::new(BTreeMap::new()),
             titles: RwLock::new(BTreeMap::new()),
         }
     }
@@ -53,9 +54,18 @@ impl Keyset {
         let key_name = key_name.as_ref();
         match self.get_key_impl(key_name)? {
             Key::Single(key) => K::from_key(&key),
-            Key::Versioned(_) => Err(KeyError::RequestedStandaloneForVersionedKey {
-                key_name: key_name.into(),
-            }),
+            Key::Versioned(keys) => {
+                // if theres only one key and its version 0 make it work without an index
+                if keys.keys().len() == 1 {
+                    if let Some(key) = keys.get(&0) {
+                        return K::from_key(key);
+                    }
+                }
+
+                Err(KeyError::RequestedStandaloneForVersionedKey {
+                    key_name: key_name.into(),
+                })
+            }
         }
     }
 
@@ -66,9 +76,15 @@ impl Keyset {
     ) -> Result<K, KeyError> {
         let key_name = key_name.as_ref();
         match self.get_key_impl(key_name)? {
-            Key::Single(_) => Err(KeyError::RequestedIndexForStandaloneKey {
-                key_name: key_name.into(),
-            }),
+            Key::Single(key) => {
+                // make index 0 work for single keys too, remove if it causes issues
+                if key_index == 0 {
+                    return K::from_key(&key);
+                }
+                Err(KeyError::RequestedIndexForStandaloneKey {
+                    key_name: key_name.into(),
+                })
+            }
             Key::Versioned(map) => map
                 .get(&key_index)
                 .ok_or(KeyError::IndexNotFoundForKey {
@@ -80,7 +96,13 @@ impl Keyset {
     }
 
     fn get_key_impl(&self, key_name: &str) -> Result<Key, KeyError> {
-        todo!()
+        self.prod
+            .read()
+            .get(key_name)
+            .ok_or(KeyError::MissingKey {
+                key_name: key_name.into(),
+            })
+            .cloned()
     }
 
     pub fn insert_key(
@@ -89,6 +111,39 @@ impl Keyset {
         key: impl Into<Vec<u8>>,
         index: Option<u8>,
     ) {
+        let mut keys = self.prod.write();
+        let name = key_name.as_ref();
+        let key = key.into();
+
+        if let Some(existing_key) = keys.get_mut(name) {
+            match (existing_key, index) {
+                (Key::Single(ref mut prev), None) => {
+                    log::trace!("replaced key {name} = {prev:?} with {key:?}");
+                    let _ = core::mem::replace(prev, key);
+                }
+                (Key::Single(_), Some(_)) => {
+                    log::warn!("tried to insert an indexed key when an unversioned one with the same name {name:?} already existed");
+                }
+                (Key::Versioned(map), Some(i)) => {
+                    map.insert(i, key);
+                }
+                (Key::Versioned(_), None) => {
+                    log::warn!("tried to insert an unversioned key when a versioned one with the same name {name:?} already existed");
+                }
+            }
+        } else {
+            let key = match index {
+                Some(idx) => {
+                    let mut map = BTreeMap::new();
+                    map.insert(idx, key);
+                    Key::Versioned(map)
+                }
+                None => Key::Single(key),
+            };
+
+            keys.insert(name.into(), key);
+        }
+
         todo!()
     }
 

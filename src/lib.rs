@@ -8,14 +8,16 @@ extern crate alloc;
 #[macro_use]
 extern crate log;
 
-pub mod containers;
-//pub mod keyset;
-pub mod error;
-pub mod storage;
 pub mod common;
+pub mod containers;
+pub mod error;
+pub mod keyset;
+pub mod storage;
 pub mod utils;
 
 pub use error::{SwonchError, SwonchResult};
+
+pub(crate) use binrw::io;
 
 pub mod prelude {
     pub use super::{
@@ -28,7 +30,7 @@ pub mod prelude {
     };
 }
 
-//pub use keyset::GLOBAL_KEYS;
+//pub use keyset::KEYS;
 
 #[cfg(feature = "std")]
 pub(crate) use parking_lot as sync_impl;

@@ -15,6 +15,9 @@ pub enum SwonchError {
     #[error("substorage error")]
     SubStorage(#[from] crate::storage::substorage::SubStorageError),
 
+    #[error("key related error")]
+    Keyset(#[from] crate::keyset::KeyError),
+
     #[error(transparent)]
     Other(#[from] anyhow::Error),
 }
