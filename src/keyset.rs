@@ -30,6 +30,9 @@ pub enum KeyError {
 
     #[error("tried to access a versioned key ({key_name:?}) without index")]
     RequestedStandaloneForVersionedKey { key_name: String },
+
+    #[error("error parsing key")]
+    Parsing(#[from] crate::utils::ParseKeyError),
 }
 
 #[derive(Clone)]
@@ -40,6 +43,36 @@ enum Key {
 
 pub trait FromRawKey: Sized {
     fn from_key(key: &[u8]) -> Result<Self, KeyError>;
+}
+
+/// A pair of Aes128 keys for XTS(N) mode, one for the block crypto the other for the tweak. 
+#[derive(Debug, Clone)]
+pub struct Aes128XtsKey(pub [u8; 0x20]);
+
+impl Aes128XtsKey {
+    pub fn crypt(&self) -> aes::Aes128 {
+        use aes::{Aes128, cipher::{KeyInit, generic_array::GenericArray}};
+
+        Aes128::new(GenericArray::from_slice(&self.0[..0x10]))
+    }
+
+    pub fn tweak(&self) -> aes::Aes128 {
+        use aes::{Aes128, cipher::{KeyInit, generic_array::GenericArray}};
+
+        Aes128::new(GenericArray::from_slice(&self.0[0x10..]))
+    }
+}
+
+impl FromRawKey for Aes128XtsKey {
+    fn from_key(key: &[u8]) -> Result<Self, KeyError> {
+        key.try_into().map(Self).map_err(|e| {
+            crate::utils::ParseKeyError::LengthMismatch {
+                requested_key_len: 0x20,
+                actual_key_len: key.len(),
+            }
+            .into()
+        })
+    }
 }
 
 impl Keyset {
@@ -143,8 +176,6 @@ impl Keyset {
 
             keys.insert(name.into(), key);
         }
-
-        todo!()
     }
 
     pub fn insert_titlekeys_from_ini(&self, reader: impl crate::io::Read) {
