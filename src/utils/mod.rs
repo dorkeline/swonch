@@ -14,7 +14,7 @@ pub(crate) fn other_io_error(
     Error::new(ErrorKind::Other, e)
 }
 
-#[derive(thiserror_no_std::Error, Debug)]
+#[derive(thiserror_no_std::Error, Clone, Debug)]
 pub enum ParseKeyError {
     #[error("keystr did not match the size requested")]
     LengthMismatch {
@@ -43,7 +43,7 @@ pub fn hex_str_to_array<const N: usize>(s: &str) -> Result<[u8; N], ParseKeyErro
     Ok(buf)
 }
 
-pub fn hex_str_to_vec(s: &str) -> Result<Vec<u8>, ParseIntError> {
+pub fn hex_str_to_vec(s: &str) -> Result<alloc::vec::Vec<u8>, ParseIntError> {
     (0..s.len())
         .step_by(2)
         .map(|idx| Ok(u8::from_str_radix(&s[idx..][..2], 16)?))

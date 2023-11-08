@@ -36,11 +36,10 @@ impl<'a, H: HeaderLike> Entry<'a, H> {
     pub fn data(&self) -> SwonchResult<Storage> {
         // if this fails either the storage changed its mind about having a length (BUG)
         // or the offset/size reported is incorrect which is a corrupt/malicious PFS0.
-        Ok(self
-            .parent
+        self.parent
             .data
             .clone()
-            .split(self.raw.offset(), self.raw.size())?)
+            .split(self.raw.offset(), self.raw.size())
     }
 }
 

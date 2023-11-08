@@ -3,14 +3,17 @@ use crate::{
     storage::{FromStorage, Storage},
     SwonchResult,
 };
-use binrw::{io::Cursor, BinRead};
 
 pub mod header;
 pub use header::*;
 
 pub struct Nca {}
 
-impl Nca {}
+impl Nca {
+    pub fn sections(&self) -> impl Iterator<Item = ()> {
+        core::iter::empty()
+    }
+}
 
 #[derive(Debug, thiserror_no_std::Error)]
 pub enum NcaError {

@@ -7,7 +7,10 @@ use binrw::{io::Cursor, BinRead};
 use core::fmt;
 
 use super::NcaError;
-use crate::{utils::{self, HexArray}, common::{ProgramId, RightsId}};
+use crate::{
+    common::{ProgramId, RightsId},
+    utils::{self, HexArray},
+};
 
 #[binrw::binrw]
 #[brw(little, magic = b"NCA")]
@@ -29,7 +32,7 @@ pub enum NcaMagic {
 #[derive(Debug, Clone)]
 pub enum DistributionType {
     Download = 0x0,
-    GameCard = 0x1
+    GameCard = 0x1,
 }
 
 #[binrw::binrw]
@@ -41,7 +44,7 @@ pub enum ContentType {
     Control = 0x2,
     Manual = 0x3,
     Data = 0x4,
-    PublicData = 0x5
+    PublicData = 0x5,
 }
 
 #[binrw::binrw]
@@ -50,7 +53,7 @@ pub enum ContentType {
 pub enum KeyAreaEncryptionKeyIndex {
     Application = 0x0,
     Ocean = 0x1,
-    System = 0x2
+    System = 0x2,
 }
 
 #[binrw::binrw]
@@ -60,7 +63,7 @@ pub struct NcaFsEntry {
     // block size == 0x200
     start_offset_block: u32,
     end_offset_block: u32,
-    reserved: u64
+    reserved: u64,
 }
 
 #[binrw::binrw]
@@ -75,7 +78,11 @@ pub struct SdkAddonVersion {
 
 impl fmt::Display for SdkAddonVersion {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}.{}.{}.{}", self.major, self.minor, self.micro, self._zero)
+        write!(
+            f,
+            "{}.{}.{}.{}",
+            self.major, self.minor, self.micro, self._zero
+        )
     }
 }
 

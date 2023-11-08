@@ -1,7 +1,7 @@
 use crate::common::RightsId;
 use crate::sync_impl::RwLock;
 
-use alloc::collections::BTreeMap;
+use alloc::{collections::BTreeMap, string::String, vec::Vec};
 
 lazy_static::lazy_static! {
     pub static ref KEYS: Keyset = Keyset::empty();
@@ -45,19 +45,25 @@ pub trait FromRawKey: Sized {
     fn from_key(key: &[u8]) -> Result<Self, KeyError>;
 }
 
-/// A pair of Aes128 keys for XTS(N) mode, one for the block crypto the other for the tweak. 
+/// A pair of Aes128 keys for XTS(N) mode, one for the block crypto the other for the tweak.
 #[derive(Debug, Clone)]
 pub struct Aes128XtsKey(pub [u8; 0x20]);
 
 impl Aes128XtsKey {
     pub fn crypt(&self) -> aes::Aes128 {
-        use aes::{Aes128, cipher::{KeyInit, generic_array::GenericArray}};
+        use aes::{
+            cipher::{generic_array::GenericArray, KeyInit},
+            Aes128,
+        };
 
         Aes128::new(GenericArray::from_slice(&self.0[..0x10]))
     }
 
     pub fn tweak(&self) -> aes::Aes128 {
-        use aes::{Aes128, cipher::{KeyInit, generic_array::GenericArray}};
+        use aes::{
+            cipher::{generic_array::GenericArray, KeyInit},
+            Aes128,
+        };
 
         Aes128::new(GenericArray::from_slice(&self.0[0x10..]))
     }
@@ -65,7 +71,7 @@ impl Aes128XtsKey {
 
 impl FromRawKey for Aes128XtsKey {
     fn from_key(key: &[u8]) -> Result<Self, KeyError> {
-        key.try_into().map(Self).map_err(|e| {
+        key.try_into().map(Self).map_err(|_| {
             crate::utils::ParseKeyError::LengthMismatch {
                 requested_key_len: 0x20,
                 actual_key_len: key.len(),
