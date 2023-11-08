@@ -5,7 +5,7 @@ use crate::{
 use alloc::sync::Arc;
 use core::{fmt, marker::PhantomData};
 
-use aes::{cipher::KeyInit, Aes128};
+use aes::Aes128;
 use xts_mode::Xts128;
 
 pub trait Tweak: fmt::Debug + Clone + 'static {
@@ -99,17 +99,16 @@ pub type AesXtsnStorage = AesXtsStorageImpl<NintendoTweak>;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::prelude::VecStorage;
     use aes::cipher::{generic_array::GenericArray, KeyInit};
 
-    fn key() -> (Aes128, Aes128) {
+    fn _key() -> (Aes128, Aes128) {
         let crypt = Aes128::new(GenericArray::from_slice(b"cafebabecafebabe"));
         let tweak = Aes128::new(GenericArray::from_slice(b"cafebabecafebabe"));
         (crypt, tweak)
     }
 
-    fn encrypt(buf: &mut [u8]) {
-        let (crypt, tweak) = key();
+    fn _encrypt(buf: &mut [u8]) {
+        let (crypt, tweak) = _key();
         let xts = Xts128::new(crypt, tweak);
 
         xts.encrypt_area(buf, 0x200, 0, xts_mode::get_tweak_default);

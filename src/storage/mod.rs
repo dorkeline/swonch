@@ -10,6 +10,7 @@ use crate::SwonchResult;
 #[cfg(not(feature = "arc_storage"))]
 use alloc::rc::Rc;
 
+pub mod crypto;
 pub mod mapper;
 mod memory;
 pub mod stdio;
@@ -96,7 +97,7 @@ impl Storage {
         }
     }
 
-    pub fn map_to_storage<M: FromStorage>(self, args: M::Args) -> SwonchResult<M> {
+    pub fn map_to_storage<M: FromStorage>(self, args: M::Args) -> M::Output {
         M::from_storage(self, args)
     }
 
@@ -112,6 +113,10 @@ impl Storage {
 impl IStorage for Storage {
     fn read_at(&self, offset: u64, buf: &mut [u8]) -> SwonchResult<u64> {
         self.inner.read_at(offset, buf)
+    }
+
+    fn write_at(&self, offset: u64, data: &[u8]) -> SwonchResult<u64> {
+        self.inner.write_at(offset, data)
     }
 
     fn split(self, offset: u64, len: u64) -> SwonchResult<Storage> {

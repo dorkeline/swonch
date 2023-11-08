@@ -69,19 +69,13 @@ pub struct Aes128XtsKey(pub [u8; 0x20]);
 
 impl Aes128XtsKey {
     pub fn crypt(&self) -> aes::Aes128 {
-        use aes::{
-            cipher::{generic_array::GenericArray, KeyInit},
-            Aes128,
-        };
+        use aes::cipher::{generic_array::GenericArray, KeyInit};
 
         Aes128::new(GenericArray::from_slice(&self.0[..0x10]))
     }
 
     pub fn tweak(&self) -> aes::Aes128 {
-        use aes::{
-            cipher::{generic_array::GenericArray, KeyInit},
-            Aes128,
-        };
+        use aes::cipher::{generic_array::GenericArray, KeyInit};
 
         Aes128::new(GenericArray::from_slice(&self.0[0x10..]))
     }

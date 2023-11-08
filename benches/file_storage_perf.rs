@@ -1,3 +1,5 @@
+#![allow(non_snake_case)]
+
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use std::io::{self, Read, Seek, Write};
 use swonch::storage::{FileStorage, IStorage, SubStorage};
@@ -12,7 +14,7 @@ fn std_file_write_1GiB() -> std::fs::File {
 
     let buf = vec![0; MIB];
 
-    for i in 0..1024 {
+    for _ in 0..1024 {
         fp.write(&buf).unwrap();
     }
 
@@ -100,7 +102,7 @@ fn criterion_benchmark(c: &mut Criterion) {
             let fp = std_file_write_1GiB();
             b.iter(|| substorage_file_storage_read_1GIB(&fp))
         })
-        /*.bench_function("std::fs::File write 1GiB", |b| b.iter(std_file_write_1GiB))
+        .bench_function("std::fs::File write 1GiB", |b| b.iter(std_file_write_1GiB))
         .bench_function("std::fs::File read 1GiB", |b| {
             let fp = std_file_write_1GiB();
             b.iter(|| std_file_read_1GiB(&fp))
@@ -111,7 +113,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         })
         .bench_function("FileStorage write 1GiB", |b| {
             b.iter(file_storage_write_1GiB)
-        })*/;
+        });
 }
 
 criterion_group!(benches, criterion_benchmark);

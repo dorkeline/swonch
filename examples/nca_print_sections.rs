@@ -1,7 +1,5 @@
 use swonch::{keyset::KEYS, prelude::*, storage::FileStorage};
 
-use std::{fs, io, path::PathBuf};
-
 fn main() -> SwonchResult<()> {
     env_logger::init();
     let _ = KEYS.init_from_default_locations();

@@ -120,8 +120,9 @@ impl<H: HeaderLike> PartitionFs<H> {
 
 impl<H: HeaderLike> FromStorage for PartitionFs<H> {
     type Args = ();
+    type Output = SwonchResult<Self>;
 
-    fn from_storage(parent: Storage, _: Self::Args) -> SwonchResult<Self> {
+    fn from_storage(parent: Storage, _: Self::Args) -> Self::Output {
         Ok(PartitionFs::from_storage(parent)?)
     }
 }

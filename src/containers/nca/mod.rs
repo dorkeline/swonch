@@ -1,15 +1,11 @@
 use crate::{
-    keyset::{KeyError, KEYS},
+    keyset::KEYS,
     prelude::IStorage,
     storage::{FromStorage, Storage},
     utils, SwonchResult,
 };
 use alloc::{sync::Arc, vec::Vec};
 
-use aes::{
-    cipher::{generic_array::GenericArray, KeyInit},
-    Aes128,
-};
 use binrw::{io::Cursor, BinRead};
 use xts_mode::Xts128;
 

@@ -1,12 +1,9 @@
-use aes::{
-    cipher::{generic_array::GenericArray, KeyInit},
-    Aes128,
-};
+use aes::Aes128;
 use alloc::sync::Arc;
 
-use crate::{keyset::KEYS, prelude::*, storage::SubStorage, utils::HexArray, SwonchResult};
+use crate::{keyset::KEYS, prelude::*, utils::HexArray, SwonchResult};
 
-use super::{Nca, NcaHeader};
+use super::Nca;
 
 #[binrw::binrw]
 #[brw(little, repr(u8))]

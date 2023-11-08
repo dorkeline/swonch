@@ -2,7 +2,7 @@ use super::{IStorage, Storage, SwonchResult};
 
 use crate::sync_impl::Mutex;
 use std::fs::File;
-use std::io::{self, Read, Seek, SeekFrom};
+use std::io::{self, Read, Seek, SeekFrom, Write};
 use std::path::Path;
 
 #[derive(Debug)]
@@ -27,6 +27,13 @@ impl IStorage for FileStorage {
         fp.seek(SeekFrom::Start(offset))?;
         let cnt = fp.read(buf)?;
 
+        Ok(cnt as _)
+    }
+
+    fn write_at(&self, offset: u64, data: &[u8]) -> SwonchResult<u64> {
+        let mut fp = self.fp.lock();
+        fp.seek(SeekFrom::Start(offset))?;
+        let cnt = fp.write(data)?;
         Ok(cnt as _)
     }
 

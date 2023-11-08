@@ -1,6 +1,6 @@
 use swonch::{keyset::KEYS, prelude::*, storage::FileStorage};
 
-use std::{fs, io::{self, Write}, path::PathBuf, time::Instant};
+use std::{fs, io::Write, path::PathBuf, time::Instant};
 
 fn main() -> SwonchResult<()> {
     env_logger::init();

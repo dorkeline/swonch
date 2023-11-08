@@ -1,0 +1,6 @@
+- Nca section decryption and opening
+- FileSystem trait, impls for Pfs0/RomFS/etc
+- write support for more storages
+- builders for Pfs0 and Nca from scratch
+- vfs driver, able to mount Storage's and FileSystem's virtually
+  -> that might allow the recursive non type erasure approach i wanted, look into that..

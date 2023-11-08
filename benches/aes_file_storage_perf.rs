@@ -1,6 +1,8 @@
+#![allow(non_snake_case)]
+
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use std::io::{self, Read, Seek, Write};
-use swonch::storage::{crypto::AesCtrStorage, FileStorage, IStorage, SubStorage};
+use swonch::storage::{crypto::AesCtrStorage, FileStorage, IStorage};
 use tempfile::tempfile;
 
 const KIB: usize = 1024;
@@ -19,7 +21,7 @@ fn std_file_write_1GiB() -> std::fs::File {
 
     let buf = vec![0; MIB];
 
-    for i in 0..1024 {
+    for _ in 0..1024 {
         fp.write(&buf).unwrap();
     }
 
@@ -35,19 +37,6 @@ fn std_file_read_1GiB(mut fp: &std::fs::File) {
     fp.read_to_end(&mut buf).unwrap();
 
     black_box(buf);
-}
-
-fn file_storage_read_1GiB(fp: &std::fs::File) {
-    let mut fp = fp.try_clone().unwrap();
-    fp.seek(io::SeekFrom::Start(0)).unwrap();
-    let storage = FileStorage::new(fp);
-
-    let mut buf = vec![0; GIB];
-    for i in (0..1024).step_by(16) {
-        black_box(storage.read_at(i * MIB as u64, &mut buf[i as usize * MIB..][..16 * MIB]))
-            .unwrap();
-        black_box(&buf);
-    }
 }
 
 fn fs_file_aes_write_1GIB() -> std::fs::File {

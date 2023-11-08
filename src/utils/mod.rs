@@ -111,13 +111,13 @@ impl<const N: usize> fmt::Display for HexArray<N> {
 }
 
 pub(crate) fn decrypt_titlekey(
-    mut enc_titlekey: [u8; 16],
+    enc_titlekey: [u8; 16],
     key_generation: u8,
 ) -> Result<[u8; 16], crate::keyset::KeyError> {
     use aes::cipher::KeyInit;
     use ecb::Decryptor;
 
-    let mut dec_titlekey = [0; 16];
+    let dec_titlekey = [0; 16];
     let titlekek = KEYS.get_key_index::<crate::keyset::Aes128Key>("titlekek", key_generation)?;
     let mut aes_ctx = Decryptor::<aes::Aes128>::new(&titlekek.0.into());
     aes_ctx.decrypt_block_b2b_mut(&enc_titlekey.into(), &mut dec_titlekey.into());
