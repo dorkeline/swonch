@@ -1,6 +1,6 @@
 experimenting with making a switch file formats driver in rust that easily supports nested containers transparently. 
 
-this isnt really viable until i added a crypto layer implementation and verified with benchmarks that my design approach is not awful
+despite being a fairly naive approach with unoptimised and no_std primitives in --release builds it performs up to 2-3 faster than hactool when decrypting a nca section and writing it to a file.
 
 ### example
 opening a NSP (common dump format) as a Pfs0 and reading the titlekey from the ticket
