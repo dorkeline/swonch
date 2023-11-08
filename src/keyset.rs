@@ -1,12 +1,15 @@
 use crate::common::RightsId;
 use crate::sync_impl::RwLock;
 
+use aes::Aes128;
 use alloc::{collections::BTreeMap, string::String, vec::Vec};
+use xts_mode::Xts128;
 
 lazy_static::lazy_static! {
     pub static ref KEYS: Keyset = Keyset::empty();
 }
 
+#[derive(Debug)]
 pub struct Keyset {
     prod: RwLock<BTreeMap<String, Key>>,
     titles: RwLock<BTreeMap<RightsId, TitleKey>>,
@@ -35,7 +38,7 @@ pub enum KeyError {
     Parsing(#[from] crate::utils::ParseKeyError),
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 enum Key {
     Single(Vec<u8>),
     Versioned(BTreeMap<u8, Vec<u8>>),
@@ -43,6 +46,21 @@ enum Key {
 
 pub trait FromRawKey: Sized {
     fn from_key(key: &[u8]) -> Result<Self, KeyError>;
+}
+
+#[derive(Clone, Debug)]
+pub struct Aes128Key(pub [u8; 0x10]);
+
+impl FromRawKey for Aes128Key {
+    fn from_key(key: &[u8]) -> Result<Self, KeyError> {
+        key.try_into().map(Self).map_err(|_| {
+            crate::utils::ParseKeyError::LengthMismatch {
+                requested_key_len: 0x20,
+                actual_key_len: key.len(),
+            }
+            .into()
+        })
+    }
 }
 
 /// A pair of Aes128 keys for XTS(N) mode, one for the block crypto the other for the tweak.
@@ -66,6 +84,20 @@ impl Aes128XtsKey {
         };
 
         Aes128::new(GenericArray::from_slice(&self.0[0x10..]))
+    }
+}
+
+impl From<Aes128XtsKey> for Xts128<Aes128> {
+    fn from(value: Aes128XtsKey) -> Self {
+        use aes::cipher::{generic_array::GenericArray, KeyInit};
+
+        let (c1, c2) = (&value.0[..0x10], &value.0[0x10..]);
+        let (crypt, tweak) = (
+            Aes128::new(GenericArray::from_slice(c1)),
+            Aes128::new(GenericArray::from_slice(c2)),
+        );
+
+        Xts128::new(crypt, tweak)
     }
 }
 
@@ -184,9 +216,34 @@ impl Keyset {
         }
     }
 
+    #[cfg(feature = "std")]
+    pub fn init_from_default_locations(&self) -> (std::io::Result<()>, std::io::Result<()>) {
+        use std::fs::File;
+
+        let res = File::open(shellexpand::tilde("~/.switch/prod.keys").to_string())
+            .map(|fp| self.insert_keys_from_ini(fp));
+        if let Err(ref e) = res {
+            log::error!("couldn't init prod keys from default location: {e:?}");
+        }
+
+        let res2 = File::open(shellexpand::tilde("~/.switch/title.keys").to_string())
+            .map(|fp| self.insert_titlekeys_from_ini(fp));
+        if let Err(ref e) = res2 {
+            log::warn!("couldn't init title keys from default location: {e:?}");
+        }
+
+        (res, res2)
+    }
+
+    pub fn insert_keys_from_ini(&self, reader: impl crate::io::Read) {
+        parse_from_ini(reader, |name, key, idx| self.insert_key(name, key, idx))
+    }
+
     pub fn insert_titlekeys_from_ini(&self, reader: impl crate::io::Read) {
         let mut titles = self.titles.write();
         parse_from_ini(reader, |name, key, idx| {
+            log::trace!("{name:?} = {key:?}");
+
             if let Some(_) = idx {
                 return log::error!("titlekey had index in name?? {name} {idx:?}");
             }
@@ -232,8 +289,11 @@ fn parse_from_ini(
     reader.read_to_string(&mut s).unwrap();
 
     for line in s.lines() {
+        log::trace!("{line:?}");
+
         let line = line.trim();
         if line.is_empty() || line.starts_with(';') {
+            log::trace!("skipped line");
             continue;
         }
 

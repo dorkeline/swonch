@@ -48,6 +48,8 @@ impl<S: IStorage, const N: usize> BlockBufferStorage<S, N> {
                 // absolutely ~~proprietary~~ unaligned
                 (false, len_) => {
                     let aligned_start = offset - offset_sector_delta;
+
+                    // point offset for rest of function at the sector following this one
                     offset = aligned_start + N as u64;
 
                     let len_into_out_buf = match offset_sector_delta + len_ >= N as u64 {
@@ -208,10 +210,10 @@ mod tests {
 
     #[test]
     fn get_alignment_test() {
-        // for some reason i need to make a type alias because otherwise this is a syntax error
-        // kind of seems like a rust bug
-        type B = BlockBufferStorage<crate::storage::crypto::aes_raw::xts::AesXtsStorage, 0x200>;
-        let get_aligned = B::get_aligned;
+        let get_aligned = BlockBufferStorage::<
+            crate::storage::crypto::aes_raw::xts::AesXtsStorage,
+            0x200,
+        >::get_aligned;
 
         assert_eq!(
             get_aligned(0, 0x200),
