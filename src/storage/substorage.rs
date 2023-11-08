@@ -72,6 +72,15 @@ impl SubStorage {
         }
         .into_storage())
     }
+
+    pub fn split_from_ignore_parent_len(parent: Storage, offset: u64, len: u64) -> Storage {
+        Self {
+            parent,
+            offset,
+            len,
+        }
+        .into_storage()
+    }
 }
 
 impl IStorage for SubStorage {
