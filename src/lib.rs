@@ -3,10 +3,8 @@
 #![deny(clippy::unwrap_used)]
 #![feature(error_in_core, iter_array_chunks)]
 
-extern crate alloc;
-
 #[macro_use]
-extern crate log;
+extern crate alloc;
 
 pub mod common;
 pub mod containers;

@@ -11,6 +11,14 @@ impl fmt::Debug for ProgramId {
     }
 }
 
+impl TryFrom<&str> for ProgramId {
+    type Error = ParseIntError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        u64::from_str_radix(value, 16).map(Self)
+    }
+}
+
 impl fmt::Display for ProgramId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "0x{:016x}", &self.0)

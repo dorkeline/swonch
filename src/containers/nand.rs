@@ -1,7 +1,7 @@
 pub struct Nand {
-    boot0: (),
-    boot1: (),
-    gpt: (),
+    _boot0: (),
+    _boot1: (),
+    _gpt: (),
 }
 
 pub enum NandPartition {
