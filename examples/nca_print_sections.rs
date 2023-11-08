@@ -1,4 +1,4 @@
-use swonch::{prelude::*, storage::FileStorage};
+use swonch::{keyset::KEYS, prelude::*, storage::FileStorage};
 
 use std::{fs, io, path::PathBuf};
 
@@ -12,7 +12,11 @@ fn main() -> SwonchResult<()> {
         .map(|s| swonch::utils::hex_str_to_array::<0x20>(&s).expect("couldnt parse header_key"))
         .expect("needs header_key as second argument");
 
+    KEYS.insert_key("header_key", &header_key, None);
+
     let nca = FileStorage::open(&fpath)?.map_to_storage::<Nca>(Some(header_key))?;
+
+    for section in nca.sections() {}
 
     Ok(())
 }

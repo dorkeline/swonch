@@ -19,13 +19,11 @@ fn main() -> SwonchResult<()> {
         .expect("needs path to a nsp as first argument");
 
     FileStorage::open(fpath)?
-        .map_to_storage::<Pfs0>(())
-        .unwrap()
+        .map_to_storage::<Pfs0>(())?
         .files()
         .find(|e| e.name().ends_with(b".tik"))
         .expect("no ticket found")
-        .data()
-        .unwrap()
+        .data()?
         .read_at(0x180, &mut tkey)?;
 
     println!("{}", hex_str(&tkey));
