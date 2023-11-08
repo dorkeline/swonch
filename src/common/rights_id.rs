@@ -1,4 +1,4 @@
-use core::fmt;
+use core::{fmt, num::ParseIntError};
 
 #[binrw::binrw]
 #[brw(big)]
@@ -17,6 +17,14 @@ impl fmt::Display for RightsId {
     }
 }
 
+impl TryFrom<&str> for RightsId {
+    type Error = ParseIntError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        u128::from_str_radix(value, 16).map(Self)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -24,6 +32,8 @@ mod tests {
     #[test]
     fn rights_id_fmt() {
         let id = RightsId(0xcafebabedeadbeef);
-        assert_eq!(id.to_string(), "0xcafebabedeadbeef")
+        let id_s = RightsId::try_from("cafebabedeadbeef").unwrap();
+        assert_eq!(id, id_s);
+        assert_eq!(id.to_string(), id_s.to_string())
     }
 }

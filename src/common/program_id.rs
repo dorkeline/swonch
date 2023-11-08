@@ -1,4 +1,4 @@
-use core::fmt;
+use core::{fmt, num::ParseIntError};
 
 #[binrw::binrw]
 #[brw(little)]
