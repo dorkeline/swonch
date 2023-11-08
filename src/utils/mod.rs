@@ -1,5 +1,9 @@
 use core::fmt;
 use core::num::ParseIntError;
+
+use aes::cipher::BlockDecryptMut;
+
+use crate::keyset::KEYS;
 pub mod string_table;
 
 pub(crate) mod sealed {
@@ -51,7 +55,8 @@ pub fn hex_str_to_vec(s: &str) -> Result<alloc::vec::Vec<u8>, ParseIntError> {
 }
 
 #[allow(unused)]
-pub(crate) fn dbg_hexdump(mut writer: impl binrw::io::Write, buf: &[u8]) {
+#[doc(hidden)]
+pub fn dbg_hexdump(mut writer: impl binrw::io::Write, buf: &[u8]) {
     let row_size = 0x20;
     for (idx, row) in buf.chunks(row_size).enumerate() {
         write!(&mut writer, "{:08x}: ", idx * row_size).unwrap();
@@ -103,4 +108,19 @@ impl<const N: usize> fmt::Display for HexArray<N> {
         }
         Ok(())
     }
+}
+
+pub(crate) fn decrypt_titlekey(
+    mut enc_titlekey: [u8; 16],
+    key_generation: u8,
+) -> Result<[u8; 16], crate::keyset::KeyError> {
+    use aes::cipher::KeyInit;
+    use ecb::Decryptor;
+
+    let mut dec_titlekey = [0; 16];
+    let titlekek = KEYS.get_key_index::<crate::keyset::Aes128Key>("titlekek", key_generation)?;
+    let mut aes_ctx = Decryptor::<aes::Aes128>::new(&titlekek.0.into());
+    aes_ctx.decrypt_block_b2b_mut(&enc_titlekey.into(), &mut dec_titlekey.into());
+
+    Ok(dec_titlekey)
 }
