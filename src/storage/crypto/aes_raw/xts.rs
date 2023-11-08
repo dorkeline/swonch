@@ -1,10 +1,11 @@
 use crate::{
-    storage::{IStorage, Storage}, SwonchResult,
+    storage::{IStorage, Storage},
+    SwonchResult,
 };
 use alloc::sync::Arc;
 use core::{fmt, marker::PhantomData};
 
-use aes::Aes128;
+use aes::{cipher::KeyInit, Aes128};
 use xts_mode::Xts128;
 
 pub trait Tweak: fmt::Debug + Clone + 'static {
@@ -34,6 +35,21 @@ pub struct AesXtsStorageImpl<T: Tweak = DefaultTweak> {
     // add to sectors before calculating tweaks
     sector_offset: i64,
     tweak: PhantomData<T>,
+}
+
+impl<T: Tweak> AesXtsStorageImpl<T> {
+    pub fn new(s: Storage, key: Xts128<Aes128>, sector_offset: i64) -> Self {
+        Self {
+            parent: s,
+            aes_ctx: Arc::new(key),
+            sector_offset,
+            tweak: PhantomData,
+        }
+    }
+
+    pub fn set_sector_offset(&mut self, new: i64) {
+        self.sector_offset = new
+    }
 }
 
 impl<T: Tweak> fmt::Debug for AesXtsStorageImpl<T> {
@@ -80,12 +96,11 @@ impl<T: fmt::Debug + Tweak> IStorage for AesXtsStorageImpl<T> {
 pub type AesXtsStorage = AesXtsStorageImpl<DefaultTweak>;
 pub type AesXtsnStorage = AesXtsStorageImpl<NintendoTweak>;
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::prelude::VecStorage;
-    use aes::cipher::{KeyInit, generic_array::GenericArray};
+    use aes::cipher::{generic_array::GenericArray, KeyInit};
 
     fn key() -> (Aes128, Aes128) {
         let crypt = Aes128::new(GenericArray::from_slice(b"cafebabecafebabe"));
