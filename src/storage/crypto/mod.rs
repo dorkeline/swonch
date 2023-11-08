@@ -1,8 +1,15 @@
-mod aes_xts;
+pub mod aes_xts;
 
 use crate::{sync_impl::Mutex, SwonchResult};
-
+use alloc::boxed::Box;
 use super::{FromStorage, IStorage};
+
+/// A buffered and self aligning wrapper storage for AES128 in XTS mode. 
+pub type AesXtsStorage = BlockBufferStorage<aes_xts::AesXtsStorage, 0x200>;
+
+/// A buffered and self aligning wrapper storage for AES128 in XTS mode with Nintendo's custom tweak. 
+pub type AesXtsnStorage = BlockBufferStorage<aes_xts::AesXtsnStorage, 0x200>;
+
 
 #[derive(Debug)]
 pub struct BlockBufferStorage<S: IStorage, const N: usize> {
@@ -17,10 +24,6 @@ impl<S: IStorage, const N: usize> BlockBufferStorage<S, N> {
             cache: Mutex::new((None, Box::new([0; N]))),
         }
     }
-
-    pub fn new_aes128_xts() {}
-    pub fn new_aes128_xtsn() {}
-    pub fn new_aes128_ctr() {}
 
     fn get_aligned(
         mut offset: u64,
@@ -200,8 +203,6 @@ impl<S: IStorage, const N: usize> IStorage for BlockBufferStorage<S, N> {
         self.inner.length()
     }
 }
-
-pub type AesXtsStorage = BlockBufferStorage<aes_xts::AesXtsStorage, 0x200>;
 
 #[cfg(test)]
 mod tests {
