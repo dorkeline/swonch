@@ -36,7 +36,14 @@ pub(crate) use parking_lot as sync_impl;
 #[cfg(not(feature = "std"))]
 pub(crate) use spin as sync_impl;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Integrity {
     WarnOnly,
     ErrorOnMismatch,
+}
+
+impl Default for Integrity {
+    fn default() -> Self {
+        Self::ErrorOnMismatch
+    }
 }
