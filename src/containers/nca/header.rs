@@ -93,7 +93,11 @@ pub struct NcaFsEntry {
 
 impl NcaFsEntry {
     pub fn is_active(&self) -> bool {
-        self.flags & 1 == 1
+        if self.start_offset_block != 0 && self.flags & 1 != 1 {
+            log::debug!("interesting, seems like that bit wasnt an is_active flag afterall");
+        }
+
+        self.start_offset_block != 0
     }
 }
 

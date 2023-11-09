@@ -2,7 +2,8 @@ use crate::{
     keyset::KEYS,
     prelude::IStorage,
     storage::{FromStorage, Storage},
-    utils, SwonchResult,
+    utils::{self, HexArray},
+    Integrity, SwonchResult,
 };
 use alloc::{sync::Arc, vec::Vec};
 
@@ -17,7 +18,7 @@ pub use section::*;
 #[derive(Debug)]
 pub struct Nca {
     storage: Storage,
-    header: NcaHeader,
+    header: Arc<NcaHeader>,
     fs_headers: [Option<Arc<FsHeader>>; 4],
 }
 
@@ -34,7 +35,8 @@ impl Nca {
             .enumerate()
             .flat_map(|(idx, hdr)| hdr.as_ref().map(|hdr| (idx, hdr)))
             .map(|(index, fs_hdr)| NcaSection {
-                parent: self.clone(),
+                parent: self.storage.clone(),
+                parent_hdr: self.header.clone(),
                 fs_header: fs_hdr.clone(),
                 index: index as u32,
             })
@@ -51,13 +53,20 @@ pub enum NcaError {
 
     #[error("header seems to be corrupted")]
     HeaderCorrupted,
+
+    #[error("hash mismatch on an FsEntry header")]
+    FsEntryHeaderHashMismatch {
+        hash_in_header: [u8; 0x20],
+        actual_hash: [u8; 0x20],
+        index: u8,
+    },
 }
 
 impl FromStorage for Nca {
-    type Args = ();
+    type Args = Integrity;
     type Output = SwonchResult<Arc<Self>>;
 
-    fn from_storage(parent: Storage, _: Self::Args) -> Self::Output {
+    fn from_storage(parent: Storage, integrity: Self::Args) -> Self::Output {
         let mut buf = vec![0; 0xc00];
         let read_cnt = parent.read_at(0, &mut buf)?;
 
@@ -93,6 +102,20 @@ impl FromStorage for Nca {
                 xts.decrypt_sector(fs_header, utils::aes_xtsn_tweak(sector))
             }
 
+            // validate current FsHeader hash
+            let hash_is_valid =
+                utils::validate_hash::<sha2::Sha256>(&fs_header, &hdr.fs_entry_hashes[idx].0);
+            if let Err(hash) = hash_is_valid {
+                match integrity {
+                    Integrity::WarnOnly => log::error!(
+                        "FsEntry header at index {idx} hash mismatch. NcaHeader claims {:?} but actual hash is {}",
+                        hdr.fs_entry_hashes[idx],
+                        HexArray(hash.into()),
+                    ),
+                    Integrity::ErrorOnMismatch => return Err(NcaError::FsEntryHeaderHashMismatch { hash_in_header: hdr.fs_entry_hashes[idx].0, actual_hash: hash.into(), index: idx as _ }.into())
+                }
+            }
+
             let fs_hdr = FsHeader::read(&mut Cursor::new(&fs_header))?;
 
             fs_headers[idx] = Some(Arc::new(fs_hdr));
@@ -104,7 +127,7 @@ impl FromStorage for Nca {
 
         Ok(Arc::new(Self {
             storage: parent,
-            header: hdr,
+            header: Arc::new(hdr),
             fs_headers,
         }))
     }

@@ -35,3 +35,8 @@ pub(crate) use parking_lot as sync_impl;
 
 #[cfg(not(feature = "std"))]
 pub(crate) use spin as sync_impl;
+
+pub enum Integrity {
+    WarnOnly,
+    ErrorOnMismatch,
+}

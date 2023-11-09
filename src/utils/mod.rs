@@ -1,7 +1,7 @@
 use core::fmt;
 use core::num::ParseIntError;
 
-use aes::cipher::BlockDecryptMut;
+use aes::cipher::{generic_array::GenericArray, ArrayLength, BlockDecryptMut};
 
 use crate::keyset::KEYS;
 pub mod string_table;
@@ -91,6 +91,7 @@ pub fn aes_xtsn_tweak(mut sector: u128) -> [u8; 0x10] {
 
 #[binrw::binrw]
 #[derive(Clone)]
+#[repr(transparent)]
 pub struct HexArray<const N: usize>(pub [u8; N]);
 
 impl<const N: usize> fmt::Debug for HexArray<N> {
@@ -123,4 +124,17 @@ pub(crate) fn decrypt_titlekey(
     aes_ctx.decrypt_block_b2b_mut(&enc_titlekey.into(), &mut dec_titlekey.into());
 
     Ok(dec_titlekey)
+}
+
+pub(crate) fn validate_hash<H: sha2::Digest>(
+    buf: &[u8],
+    hash: &[u8],
+) -> Result<(), GenericArray<u8, H::OutputSize>> {
+    let calculated_hash = H::digest(buf);
+
+    if &calculated_hash[..] == hash {
+        Ok(())
+    } else {
+        Err(calculated_hash)
+    }
 }
